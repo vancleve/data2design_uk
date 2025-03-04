@@ -1,5 +1,5 @@
 ---
-title: 'Speed run through ggplot2!'
+title: 'The basics of `ggplot2`'
 author: "Rosana Zenil-Ferguson and Jeremy Van Cleve"
 date: 03/06/2025
 format: 
@@ -7,67 +7,235 @@ format:
     self-contained: true
 ---
 
-## Open a Project
-  
-  Go to File-> New Project -> New directory->New project, make sure you put it in the Desktop (so it is easy to find) and name your project "ggplot_basictutorial". The projects allow us to keep all our files in one place.
+## notes to self
 
-## Packages
+### have 2-3 plot with these features
+
+- plot with text labels that need adjusting
+- unedited axes labels
+- points with different colors
+- background color
+- hline for editing
+
+### show them how to save as pdf
+
+### send above list to jenna
+
+# Workshop materials
+
+Workshop materials can be found at <https://github.com/vancleve/data2design_uk>.
+
+# Download R and RStudio
+
+If you haven't already downloaded and installed R and RStudio, please do so now.
+
+## R
+
+- Windows: <https://cran.rstudio.com/bin/windows/base/>
+- macOS: <https://cran.rstudio.com/bin/macosx/>
+
+## Rstudio
+
+<https://posit.co/download/rstudio-desktop/>
+
+# Getting a Project going in RStudio
+
+## RStudio cheatsheet
+
+- Website: <https://rstudio.github.io/cheatsheets/html/rstudio-ide.html>
+- PDF: <https://rstudio.github.io/cheatsheets/rstudio-ide.pdf>
+  
+# Create a new project in RStudio
+
+Using a "project" allows us to keep all our files in one place and helps RStudio understand which files belong to which project
+
+1. Go to `File`->`New Project`->`New directory`->`New project`
+2. Select an easy to find directory
+3. Name your project something descriptive like "data2design_ggplot_tutorial".
+4. Save this `qmd` file into your project directory.\
+   Go to <https://github.com/vancleve/data2design_uk/raw/refs/heads/main/ggplot_tutorial.qmd> and `Save As...` in your browser.
+
+# Packages
 
 Packages are groups of different functions or "actions" that allows us to do special tasks. People write packages to help others with reproducibility of analyses.
 
+We will be working with the plotting package `ggplot2` and a set of packages for data wrangling called `tidyverse` (<https://www.tidyverse.org/>). By installing just `tidyverse`, we can get all those packages at once.
+
 ```{r}
 #| eval: false
-install.packages("tidyverse") # packages for data wrangling and plotting including dplyr, readr, tidyr, stringr, ggplot2, and others
-install.packages("readxl") # this works with reading excel sheets
+install.packages("tidyverse") # packages for data wrangling and plotting including dplyr, readr, tidyr, stringr, readxl, ggplot2, and others
 ```
-
-It is not sufficient with installing the packages we have to load them in our "environment" (it is like bringing a pen if you are plannint to write, not only buying it!). To load them we use the function ``library()`` 
-
+Once installed, packages must be loaded into our "environment" (it is like bringing a pen if you are planning to write, not only buying it!). To load them we use the function `library()` 
 
 ```{r}
 library(tidyverse)
 library(readxl)
 ```
 
+# Reading data
 
-## Reading the data
-
-The function `read_xlsx` allows us to read excel files. Go ahead and read the dataset of the paper of Onstein et al. *Which frugivory‐related traits facilitated historical long‐distance dispersal in the custard apple family (Annonaceae)?.* Journal of Biogeography. 2019. 46(8):1874-88.
+The function `read_excel` from the package `readxl` allows us to read excel files and `read_csv` allows us to read csv (comma separated value) files. We will first load a dataset from Onstein et al. (2019)[^1] frugivory‐related traits and dispersal in the custard apple family. In the code below, we'll load the data directly from Dryad (<https://datadryad.org/dataset/doi:10.5061/dryad.2hd8b0s>), which is a repository for archiving datasets, by first downloading the `xlsx` file and then loading it with `read_excel`. We'll also simplify some of the column names too for clarity and turn some of the columns from log values into normal values.
 
 ```{r}
-fruits <- read_xlsx('onstein_simple.xlsx')
+tf = tempfile(fileext = ".xlsx")
+curl::curl_download("https://datadryad.org/downloads/file_stream/82494", tf)
+
+fruits <- 
+  read_excel(tf, sheet = "Matrix for analysis", na = "NA") |>
+  rename(Taxon_tree = Species_tree, Taxon = Species_PROTEUS) |>
+  mutate(across(starts_with("Log_"), exp, .names = "Exp_{col}")) |>
+  rename_with(\(x) gsub("Exp_Log_", "", x, fixed = TRUE))
 
 ## Check what is inside the dataset, was it read fine?
-head(fruits)
+fruits
 ```
-
 
 # Plotting and understanding our data
 
-## Histograms
+## Basics of `ggplot2`: bar plots
 
-What are histograms? They are one of the most useful tools for **continuous traits**. They group observations in bins (or cajitas) to show us what is more frequent.
+The `ggplot2` package is built on the idea that graphics have can have a "grammar", or set or rules, that specifies how they can and should be constructed. Implementing these rules not only makes creating graphics easier, but it makes such graphics consistent and clear. Hadley Wickham, the creator of `ggplot2`, borrows this idea from the book, "The Grammar of Graphics"" by Wilkinson, Anand, and Grossman (2005)[^2]. While this structure may seem a bit artificial at first, it makes creating graphics very modular and building up complex graphics much easier.
+
+Our first plot will be one of the simplest, which is a bar plot.  Let's plot the number of species by their `Fruit_type`.
+```{r}
+ggplot(fruits) +
+  geom_bar(aes(x = Fruit_type))
+```
+The above `ggplot` command has two pieces. The first is a call to `ggplot` with the name of the data table. This command by itself creates a blank canvas onto which we can plot using data from the data table. The second piece is to "add" a layer to this canvas with `+`, and that layer is a bar plot. The `geom` part is short for geometry since all the graphical elements of different plot types are made up of geometric pieces. In the argument to `geom_bar`, we give an "aesthetic mapping" with `aes(x = Fruit_type)`, which says we want the x-axis to map to the `Fruit_type` column of our data. Finally, `geom_bar` builds bars automatically whose height is given by the number of rows in the data table with each x value.
+
+This plot is a bit boring but we can spice it up with another aesthetic. Let's try the color of the bar, which is known as the "fill". We'll set the fill to the `Cauliflory` variable.
+```{r}
+ggplot(fruits) +
+  geom_bar(aes(x = Fruit_type, fill = Cauliflory))
+```
+`ggplot` is smart here and automatically adds a legend for the color aethetic since you otherwise wouldn't know which color mapped to which value of `Dehiscence`. In fact, `ggplot` also automatically added the tick labels for the same reason for the x-axis aesthetic.
+
+## Grids of plots
+
+Looking at our dataset, there are a few other fruit variables we can look at like `Dehiscence` and `Moniliform`. What if we wanted to see if how the number of each `Fruit_type` varies as a function of different values of `Dehiscence` and `Moniliform`? One way to visualize this would be to replicate the bar plot above for each combination of `Dehiscence` and `Moniliform`. It turns out that `ggplot` let's us do this very easily by adding a `facet_wrap` layer onto our bar plot.
+```{r}
+ggplot(fruits) +
+  geom_bar(aes(x = Fruit_type, fill = Cauliflory)) +
+  facet_wrap(vars(Dehiscence, Moniliform))
+```
+What can we observe from this?
+
+Notice that the y-axis scales are all the same. This is on purpose and allows us to compare the data across the panels of the plot. However, we miss the variation in the panels with fewer observations. To allow the y-axis scales to adjust in each panel, we can add `scales = "free_y"` to `facet_wrap`.
+```{r}
+ggplot(fruits) +
+  geom_bar(aes(x = Fruit_type, fill = Cauliflory)) +
+  facet_wrap(vars(Dehiscence, Moniliform), scales = "free_y")
+```
+
+## Scatter plots
+
+When do we use scatter plots? Scatter plots are great for looking at how variables are correlated to one another and for seeing the full distribution of the data since you typically plot every single point.
+
+Let's make our first basic scatter plot. Notice that we put the `aes` command as an argument to the `ggplot` command. This works just as well as putting it in the `geom_point` command except that we can add on additional geometries without having to repeat the `aes` command.
+```{r}
+ggplot(fruits, aes(x=Fruit_length_avg, y=Fruit_width_avg)) + 
+  geom_point()
+```
+What do we notice?
+
+Now let's add a regression (linear model) line through the points.
+```{r}
+ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg)) + 
+  geom_point() +
+  geom_smooth(method="lm")
+```
+The `geom_smooth` function is what adds the linear regression line. Note here we have to add `method="lm"` to tell `geom_smooth` to add a straight line (i.e., linear); otherwise, it defaults to a more complex method that fits a smooth curve.
+```{r}
+ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg)) + 
+  geom_point() +
+  geom_smooth()
+```
+
+By adding a color aesthetic, the points are colored based on the value of the variable we map to color. Here, let's map `Shrub` to color and keep the linear regression.
+```{r}
+ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg, color = Shrub)) + 
+  geom_point() + 
+  geom_smooth(method = lm, se = FALSE, fullrange = TRUE)
+```
+Are groups different?
+
+### Volcano plots
+
+Scatter plots can be used to visualize all kinds of data and are especially population in genomics data. For example, differential expression analyses using RNA-seq are very common and a "volcano plot" is often used to show which genes have increased and which have decreased expression in an experiment. We'll use a dataset common in RNA-seq differential expression tutorials[^3], `airway`, which comes from an RNA-Seq experiment on four human airway smooth muscle cell lines treated with dexamethasone[^4]. The data from `airway` can be loaded from the workshop GitHub site.
+```{r}
+airway_de = read_csv("airway_de_transcript.csv")
+airway_de
+```
+Each row of the table is gene whose expression was measured in the experiment, `logFC` is the log2 of the ratio of the expression in the treatment vs the control, `PValue` is the significance of the comparison, and `FDR` is false discovery rate.
+
+Plotting the volcano plot is as simple as plotting the `logFC` on the x-axis and the `-log10(Pvalue)` on the y-axis. We can color the points by those with a FDR < 0.05.
+```{r}
+ggplot(airway_de, aes(x = logFC, y = -log10(PValue), colour = FDR < 0.05)) +
+    geom_point()
+```
+
+What if we want to color points as well by those with a greater than 2 fold change in expression up or down? Then we can do a little wrangling to create a new `signficance` column and use that for the color.
+```{r}
+airway_de_sig = airway_de |>
+  mutate(significance =
+           case_when(
+             FDR < 0.05 & abs(logFC) >= 2 ~ "significant FDR and FC",
+             FDR < 0.05 & abs(logFC) < 2 ~ "significant FDR",
+             FDR > 0.05 & abs(logFC) >= 2 ~ "significant FC",
+             .default = "non-significant"
+           ))
+
+
+ggplot(airway_de_sig, aes(x = logFC, y = -log10(PValue), colour = significance)) +
+  geom_point()
+```
+
+Finally, what about labeling some of the genes with the most significant (i.e., lowest) p-values? To do this, we need a little more data wrangling and a new geometry called `geom_text` that places a label on top of a data point.
+```{r}
+airway_de_sig_lbl = 
+  airway_de_sig |>
+  mutate(label = ifelse(PValue < 5e-9, gene_name, ""))
+  
+plt = ggplot(airway_de_sig_lbl, aes(x = logFC, y = -log10(PValue))) +
+  geom_point(aes(colour = significance)) +
+  geom_text(aes(label = label))
+plt
+```
+This looks great except the labels are right on top of the points and they overlap. We can fix this in Illustrator! Let's save the plot to a PDF so we can load it into illustrator later.
+```{r}
+#| eval: false
+ggsave("airway_de_plot.pdf", plt, width = 8, height = 5)
+```
+
+## Plotting distributions
+
+Often we are interested in understanding how often observations of a certain size appear in our data. For example, how many species have fruit of a certain length? To answer questions like this, we need to visualize the distribution of the data.
+
+Questions about distributions often come up when our variables are **contrinous** or **metric**, which means that we can add and subtract values of the variable and create summaries of the variable like its mean value.
+
+### Histograms
+
+One of the most common ways of visualizing a distribution is with a histogram, which groups observations into bins (or cajitas) to show us which kinds of observations are more frequent.
 
 Let's make a basic histogram!
-```{r echo=TRUE}
-ggplot(fruits, aes(x=fruit_length_average)) + geom_histogram()
+```{r}
+ggplot(fruits, aes(x=Fruit_length_avg)) + geom_histogram()
 ```
 
 Let's interpret it!
-
 
 ### Making histograms pretty and more useful
   
   Changing colors in and out and saving it
 ```{r}
-p_histogram<- ggplot(fruits, aes(x=fruit_length_average))+ geom_histogram(color="darkblue", fill="hotpink")
+p_histogram<- ggplot(fruits, aes(x=Fruit_length_avg))+ geom_histogram(color="darkblue", fill="hotpink")
 p_histogram
 ```
 
-What if we want to separate the data by the type of plant? and we have a variable ``shrub`` in the dataset that tells us which one is a shrub or not a shrub
+What if we want to separate the data by the type of plant? and we have a variable ``Shrub`` in the dataset that tells us which one is a shrub or not a shrub
 
 ```{r}
-p_histogram<-ggplot(fruits, aes(x=fruit_length_average, color=shrub)) + 
+p_histogram<-ggplot(fruits, aes(x=Fruit_length_avg, color=Shrub)) + 
   geom_histogram(fill="white")
 p_histogram
 ```
@@ -77,8 +245,8 @@ What if we want to add the mean of each group?
 ```{r}
 ## Calculating the mean per group using Dplyr
 ## we are naming the mean of each group mean_fl (as a short for mean fruit length)
-mu<-fruits %>% group_by(shrub) %>% 
-  summarize(mean_fl=mean(fruit_length_average, na.rm=TRUE),
+mu<-fruits %>% group_by(Shrub) %>% 
+  summarize(mean_fl=mean(Fruit_length_avg, na.rm=TRUE),
             .groups = 'drop')
 mu
 ```
@@ -97,9 +265,9 @@ mu<-mu[2:3,] ## discuss here how R reads tables and matrices as rows and columns
 Okay so now finally add the mean to the groups and the histogram
 
 ```{r}
-p_histogram<-ggplot(fruits, aes(x=fruit_length_average, color=shrub)) +
+p_histogram<-ggplot(fruits, aes(x=Fruit_length_avg, color=Shrub)) +
   geom_histogram(fill="white", position="dodge")+
-  geom_vline(data=mu, aes(xintercept=mean_fl, color=shrub),
+  geom_vline(data=mu, aes(xintercept=mean_fl, color=Shrub),
              linetype="dashed")+
   theme(legend.position="top")
 p_histogram
@@ -121,19 +289,19 @@ p_histogram
 ```
 
 
-## Density plots
+### Density plots
 
 What are density plots?- They are areas under the curve and later they will help us to decide about probability!
   
   Let's make a simple one!
 ```{r}
-p_density<-ggplot(fruits, aes(x=fruit_length_average)) + geom_density()
+p_density<-ggplot(fruits, aes(x=Fruit_length_avg)) + geom_density()
 p_density
 ```
 
 Make it pretty colors
 ```{r}
-p_density<-ggplot(fruits, aes(x=fruit_length_average))+
+p_density<-ggplot(fruits, aes(x=Fruit_length_avg))+
   geom_density(color="darkblue", fill="lightblue")
 p_density
 ```
@@ -142,13 +310,13 @@ Remember those pesky ``NAs`` what happens in density plots if we remove them. Fo
 
 
 ```{r}
-p_density<-ggplot(data=subset(fruits,!is.na(fruit_length_average)), aes(x=fruit_length_average)) + geom_density()
+p_density<-ggplot(data=subset(fruits,!is.na(Fruit_length_avg)), aes(x=Fruit_length_avg)) + geom_density()
 p_density
 ```
 
 We will add the mean and remember to remove  ``NAs`` (do one with and one without NAs)
 ```{r}
-mean.fruit=mean(fruits$fruit_length_average,na.rm=TRUE)
+mean.fruit=mean(fruits$Fruit_length_avg,na.rm=TRUE)
 mean.fruit
 
 p_density<-p_density+ geom_vline(aes(xintercept=mean.fruit),
@@ -158,129 +326,153 @@ p_density
 
 
 Change density plot line colors by groups
-```{r echo=TRUE}
-p_density<-ggplot(fruits, aes(x=fruit_length_average, color=shrub)) +
-  geom_density() + geom_vline(data=mu, aes(xintercept=mean_fl, color=shrub),
+```{r}
+p_density<-ggplot(fruits, aes(x=Fruit_length_avg, color=Shrub)) +
+  geom_density() + geom_vline(data=mu, aes(xintercept=mean_fl, color=Shrub),
              linetype="dashed")
 p_density
 
 # Fill them in 
-p_density<-ggplot(fruits, aes(x=fruit_length_average, fill=shrub)) + geom_density(alpha=0.4)+ geom_vline(data=mu, aes(xintercept=mean_fl, color=shrub),  linetype="dashed")
+p_density<-ggplot(fruits, aes(x=Fruit_length_avg, fill=Shrub)) + geom_density(alpha=0.4)+ geom_vline(data=mu, aes(xintercept=mean_fl, color=Shrub),  linetype="dashed")
 p_density
 ```
 
 Adding my color scheme (tolk about coolors here)
-```{r echo=TRUE}
+```{r}
 p_density<-p_density+scale_fill_manual(values=c("hotpink", "#56B4E9"))
 p_density
 ```
 
 Making it publication style
-```{r echo=TRUE}
+```{r}
 p_density<- p_density+ xlab("Average Fruit Length")+theme_classic()
 p_density
 ```
 
 
-## Histogram with density plot
+### Histogram with density plot
 ```{r}
-p_histdensity<-ggplot(fruits, aes(x=fruit_length_average)) + 
+p_histdensity<-ggplot(fruits, aes(x=Fruit_length_avg)) + 
   geom_histogram(aes(y=..density..), colour="black", fill="white")+
   geom_density(alpha=.2, fill="hotpink") 
 p_histdensity
 ```
 
-## Making Box and Whisker plots
+### Making Box and Whisker plots
 
 What are box and whisker plots? What are quartiles and interquartile difference??
 
-```{r echo=TRUE}
-ggplot(data=fruits, aes(x=fruit_length_average)) + 
+```{r}
+ggplot(data=fruits, aes(x=Fruit_length_avg)) + 
   geom_boxplot()
 ```
 
 How do we make it vertical???
-```{r echo=TRUE}
-p_boxplot<-ggplot(data=fruits, aes(y=fruit_length_average)) + 
+```{r}
+p_boxplot<-ggplot(data=fruits, aes(y=Fruit_length_avg)) + 
   geom_boxplot()
 p_boxplot
 ```
 
 How do we make it box and whisker plots by group??
-```{r echo=TRUE}
-p_boxplot<-ggplot(fruits, aes(y=fruit_length_average, color=shrub)) +
+```{r}
+p_boxplot<-ggplot(fruits, aes(y=Fruit_length_avg, color=Shrub)) +
   geom_boxplot()
 p_boxplot
 ```
 
 How do we change the color?
-```{r echo=TRUE}
-p_boxplot<-ggplot(fruits, aes(x=shrub,y=fruit_length_average, color=shrub)) +
+```{r}
+p_boxplot<-ggplot(fruits, aes(x=Shrub,y=Fruit_length_avg, color=Shrub)) +
   geom_boxplot()+scale_color_manual(values=c("hotpink", "#56B4E9"))
 p_boxplot
 ```
 
 How do we fill them in
-```{r echo=TRUE}
-p2<-ggplot(fruits, aes(x=shrub,y=fruit_length_average, fill=shrub)) +
+```{r}
+p2<-ggplot(fruits, aes(x=Shrub,y=Fruit_length_avg, fill=Shrub)) +
   geom_boxplot()
 
 p2+scale_fill_manual(values=c("hotpink", "#56B4E9"))
 ```
 
 Eliminating those pesky NAs from plots
-```{r echo=TRUE}
-p_boxplot<-ggplot(data=subset(fruits, !is.na(fruit_length_average)), aes(x=shrub,y=fruit_length_average, color=shrub)) +
+```{r}
+p_boxplot<-ggplot(data=subset(fruits, !is.na(Fruit_length_avg)), aes(x=Shrub,y=Fruit_length_avg, color=Shrub)) +
   geom_boxplot()+scale_color_manual(values=c("hotpink", "#56B4E9"))
 p_boxplot
 ```
 
 How do we add the mean?
-```{r echo=TRUE}
-p_boxplot<-p_boxplot + geom_point(data=mu,aes(x=shrub,y=mean_fl),shape=23, size=4)
+```{r}
+p_boxplot<-p_boxplot + geom_point(data=mu,aes(x=Shrub,y=mean_fl),shape=23, size=4)
 p_boxplot
 ```
 
 Adding good labels
-```{r echo=TRUE}
+```{r}
 p_boxplot<-p_boxplot+xlab("Shrub status")+ylab("Average fruit length")
 p_boxplot
 ```
 
 How do we add all the sample?
-```{r echo=TRUE}
+```{r}
 p_boxplot<-p_boxplot + geom_jitter(shape=16, position=position_jitter(0.2))
 p_boxplot
 ```
 
 All pretty and ready for publication
-```{r echo=TRUE}
+```{r}
 p_boxplot<-p_boxplot+theme_classic()
 p_boxplot
 ```
 
-## Scatterplot
+[^1]: Onstein, R. E., W. D. Kissling, L. W. Chatrou, T. L. P. Couvreur, H. Morlon, and H. Sauquet. 2019. Which frugivory-related traits facilitated historical long-distance dispersal in the custard apple family (Annonaceae)? Journal of Biogeography 46:1874–1888.
+[^2]: Wilkinson, L. 2005. The grammar of graphics. Statistics and computing. Springer New York.
+[^3]: https://stemangiola.github.io/rpharma2020_tidytranscriptomics/articles/tidytranscriptomics.html
+[^4]: Himes, B. E., X. Jiang, P. Wagner, R. Hu, Q. Wang, B. Klanderman, R. M. Whitaker, et al. 2014. RNA-Seq Transcriptome Profiling Identifies CRISPLD2 as a Glucocorticoid Responsive Gene that Modulates Cytokine Function in Airway Smooth Muscle Cells. PLOS ONE 9:e99625.
 
-When do we use scatterplots?
 
-Let's make our first basic scatterplot
-```{r echo=TRUE}
-ggplot(fruits, aes(x=fruit_length_average, y=fruit_width_average))+ geom_point()
+
+##
+
+Let's load the libraries and the dataset
+```{r}
+#| warning: false
+library(airway)
+library(tidybulk)
+
+# load airway RNA sequencing data
+data(airway)
+
+# convert to tidybulk tibble
+tbl_airway <-
+    airway |>
+    tidybulk()
 ```
-What do we notice?
-  
-  Now let's do a regression (linear model) through it?
-```{r echo=TRUE}
-p_scatter<-ggplot(fruits, aes(x=fruit_length_average, y=fruit_width_average)) + 
-  geom_point()+
-  geom_smooth(method=lm)
-p_scatter
-```
 
-Are groups different?
-```{r echo=TRUE}
-p_scatter<-ggplot(fruits, aes(x=fruit_length_average, y=fruit_width_average, color=shrub)) +geom_point() + 
-  geom_smooth(method=lm, se=FALSE, fullrange=TRUE)
-p_scatter
-```
 
+```{r}
+tbl_filtered = tbl_airway |>
+  mutate(.sample=str_remove(.sample, "SRR1039")) |>
+  mutate(symbol = AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, keys = as.character(.feature), keytype = "ENSEMBL", column="SYMBOL", multiVals = "first")) |>
+  keep_abundant(factor_of_interest=dex)
+
+
+tbl_de = tbl_filtered |>
+   test_differential_abundance(
+      .formula = ~ 0 + dex + cell,
+      contrasts = c("dextrt - dexuntrt"),
+      omit_contrast_in_colnames = TRUE
+    )
+
+tbl_transcript = tbl_de |> pivot_transcript()
+
+tbl_transcript |>
+  ggplot(aes(x = logFC, y = PValue, colour = FDR < 0.05)) +
+  geom_point() +
+  scale_y_continuous(trans = "log10_reverse")
+
+tbl_transcript |> write_csv("airway_de_transcript.csv")
+
+```
