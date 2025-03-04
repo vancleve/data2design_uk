@@ -4,6 +4,7 @@ author: "Rosana Zenil-Ferguson and Jeremy Van Cleve"
 date: 03/06/2025
 format: 
   html:
+    output-file: "index"
     self-contained: true
 ---
 
@@ -431,48 +432,3 @@ p_boxplot
 [^2]: Wilkinson, L. 2005. The grammar of graphics. Statistics and computing. Springer New York.
 [^3]: https://stemangiola.github.io/rpharma2020_tidytranscriptomics/articles/tidytranscriptomics.html
 [^4]: Himes, B. E., X. Jiang, P. Wagner, R. Hu, Q. Wang, B. Klanderman, R. M. Whitaker, et al. 2014. RNA-Seq Transcriptome Profiling Identifies CRISPLD2 as a Glucocorticoid Responsive Gene that Modulates Cytokine Function in Airway Smooth Muscle Cells. PLOS ONE 9:e99625.
-
-
-
-##
-
-Let's load the libraries and the dataset
-```{r}
-#| warning: false
-library(airway)
-library(tidybulk)
-
-# load airway RNA sequencing data
-data(airway)
-
-# convert to tidybulk tibble
-tbl_airway <-
-    airway |>
-    tidybulk()
-```
-
-
-```{r}
-tbl_filtered = tbl_airway |>
-  mutate(.sample=str_remove(.sample, "SRR1039")) |>
-  mutate(symbol = AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, keys = as.character(.feature), keytype = "ENSEMBL", column="SYMBOL", multiVals = "first")) |>
-  keep_abundant(factor_of_interest=dex)
-
-
-tbl_de = tbl_filtered |>
-   test_differential_abundance(
-      .formula = ~ 0 + dex + cell,
-      contrasts = c("dextrt - dexuntrt"),
-      omit_contrast_in_colnames = TRUE
-    )
-
-tbl_transcript = tbl_de |> pivot_transcript()
-
-tbl_transcript |>
-  ggplot(aes(x = logFC, y = PValue, colour = FDR < 0.05)) +
-  geom_point() +
-  scale_y_continuous(trans = "log10_reverse")
-
-tbl_transcript |> write_csv("airway_de_transcript.csv")
-
-```
