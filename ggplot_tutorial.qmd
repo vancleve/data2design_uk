@@ -163,7 +163,7 @@ Are groups different?
 
 Scatter plots can be used to visualize all kinds of data and are especially population in genomics data. For example, differential expression analyses using RNA-seq are very common and a "volcano plot" is often used to show which genes have increased and which have decreased expression in an experiment. We'll use a dataset common in RNA-seq differential expression tutorials[^3], `airway`, which comes from an RNA-Seq experiment on four human airway smooth muscle cell lines treated with dexamethasone[^4]. The data from `airway` can be loaded from the workshop GitHub site.
 ```{r}
-airway_de = read_csv("airway_de_transcript.csv")
+airway_de = read_csv("https://raw.githubusercontent.com/vancleve/data2design_uk/refs/heads/main/airway_de_transcript.csv")
 airway_de
 ```
 Each row of the table is gene whose expression was measured in the experiment, `logFC` is the log2 of the ratio of the expression in the treatment vs the control, `PValue` is the significance of the comparison, and `FDR` is false discovery rate.
