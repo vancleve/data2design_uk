@@ -141,11 +141,17 @@ ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg)) +
 
 By adding a color aesthetic, the points are colored based on the value of the variable we map to color. Here, let's map `Shrub` to color and keep the linear regression.
 ```{r}
-ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg, color = Shrub)) + 
+plt <- ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg, color = Shrub)) + 
   geom_point() + 
   geom_smooth(method = lm, se = FALSE, fullrange = TRUE)
+plt
 ```
-Are groups different?
+
+Are groups different? Let's also save this plot for later for modification in Illustrator.
+```{r}
+#| eval: false
+ggsave("fruit_size_point_plot.pdf", plt, width = 20, height = 12)
+```
 
 ### Volcano plots
 
@@ -192,7 +198,7 @@ plt
 This looks great except the labels are right on top of the points and they overlap. Maybe we also want to modify the background or add horizontal or vertical lines separating the regions? We can do all these things in Illustrator! Let's save the plot to a PDF so we can load it into illustrator later.
 ```{r}
 #| eval: false
-ggsave("airway_de_plot.pdf", plt, width = 8, height = 5)
+ggsave("airway_de_plot.pdf", plt, width = 20, height = 12)
 ```
 
 ## Plotting distributions
