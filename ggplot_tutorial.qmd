@@ -8,20 +8,6 @@ format:
     self-contained: true
 ---
 
-## notes to self
-
-### have 2-3 plot with these features
-
-- plot with text labels that need adjusting
-- unedited axes labels
-- points with different colors
-- background color
-- hline for editing
-
-### show them how to save as pdf
-
-### send above list to jenna
-
 # Workshop materials
 
 Workshop materials can be found at <https://github.com/vancleve/data2design_uk>.
