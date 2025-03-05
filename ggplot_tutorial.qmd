@@ -90,6 +90,7 @@ fruits <-
 ## Check what is inside the dataset, was it read fine?
 fruits
 ```
+There is a lot going on the data wrangling above that we won't have time to cover today, but one thing to point now is the use of the pipe operator, `|>`, above. The pipe operator helps up string together data wrangling commands; what's on the left hand side of the pipe goes into the first argument of what's on the right hand side. This means the above code starts with the `read_excel` function that returns the raw table that is given the `rename` function that then renames a couple of the columns and returns a modified table that is then passed to `mutate`, etc, and find the results is saved in the `fruits` variable. 
 
 # Plotting and understanding our data
 
@@ -202,7 +203,7 @@ plt = ggplot(airway_de_sig_lbl, aes(x = logFC, y = -log10(PValue))) +
   geom_text(aes(label = label))
 plt
 ```
-This looks great except the labels are right on top of the points and they overlap. We can fix this in Illustrator! Let's save the plot to a PDF so we can load it into illustrator later.
+This looks great except the labels are right on top of the points and they overlap. Maybe we also want to modify the background or add horizontal or vertical lines separating the regions? We can do all these things in Illustrator! Let's save the plot to a PDF so we can load it into illustrator later.
 ```{r}
 #| eval: false
 ggsave("airway_de_plot.pdf", plt, width = 8, height = 5)
@@ -220,142 +221,160 @@ One of the most common ways of visualizing a distribution is with a histogram, w
 
 Let's make a basic histogram!
 ```{r}
-ggplot(fruits, aes(x=Fruit_length_avg)) + geom_histogram()
+ggplot(fruits, aes(x=Fruit_length_avg)) + 
+  geom_histogram()
 ```
 
 Let's interpret it!
 
 ### Making histograms pretty and more useful
   
-  Changing colors in and out and saving it
+We saw how to change the fill of bars in a bar chart, but we can also change the color of the surrounding box. Here's how:
 ```{r}
-p_histogram<- ggplot(fruits, aes(x=Fruit_length_avg))+ geom_histogram(color="darkblue", fill="hotpink")
+p_histogram <- ggplot(fruits, aes(x = Fruit_length_avg)) + 
+  geom_histogram(color = "darkblue", fill = "hotpink")
 p_histogram
 ```
 
-What if we want to separate the data by the type of plant? and we have a variable ``Shrub`` in the dataset that tells us which one is a shrub or not a shrub
-
+There are some pesky ``NAs`` that are causing the warnings above. What happens in the histogram if we remove them? For that we will use the function `filter` and save the sliced data into `fruits_mod`.
 ```{r}
-p_histogram<-ggplot(fruits, aes(x=Fruit_length_avg, color=Shrub)) + 
-  geom_histogram(fill="white")
+fruits_mod <- filter(fruits, !is.na(Fruit_length_avg))
+
+p_histogram <- ggplot(fruits_mod, aes(x = Fruit_length_avg)) + 
+  geom_histogram(color = "darkblue", fill = "hotpink")
 p_histogram
 ```
 
-What if we want to add the mean of each group? 
- 
+What if we want to separate the data by the type of plant? We can use the variable ``Shrub`` in the dataset that tells us which one is a shrub or not a shrub
+```{r}
+p_histogram<-ggplot(fruits_mod, aes(x = Fruit_length_avg, color = Shrub)) + 
+  geom_histogram(fill = "white")
+p_histogram
+```
+
+What if we want to add the mean of each group? We can first calculate the mean like below
 ```{r}
 ## Calculating the mean per group using Dplyr
 ## we are naming the mean of each group mean_fl (as a short for mean fruit length)
-mu<-fruits %>% group_by(Shrub) %>% 
-  summarize(mean_fl=mean(Fruit_length_avg, na.rm=TRUE),
+mu <- fruits_mod |>
+  filter(!is.na(Shrub)) |>
+  group_by(Shrub) |>
+  summarize(mean_fl = mean(Fruit_length_avg, na.rm = TRUE),
             .groups = 'drop')
 mu
 ```
 
-The little symbol ``%>%`` are called pipes in this package. Piping is an important tool for reproducibility. You never change your original data, you only reorder internally and put through a pipe line
-
 Ok, so what is happening with the dimension of mu? what do you notice?
-  
 ```{r}
 dim(mu)
-### (there are NAs this will be annoying later on, so we are going to remove)
-mu<-mu[2:3,] ## discuss here how R reads tables and matrices as rows and columns!!!!
-# another option mu<- mu[-1,]
 ```
 
 Okay so now finally add the mean to the groups and the histogram
-
 ```{r}
-p_histogram<-ggplot(fruits, aes(x=Fruit_length_avg, color=Shrub)) +
-  geom_histogram(fill="white", position="dodge")+
-  geom_vline(data=mu, aes(xintercept=mean_fl, color=Shrub),
-             linetype="dashed")+
-  theme(legend.position="top")
+p_histogram <- ggplot(fruits_mod, aes(x = Fruit_length_avg, color = Shrub)) +
+  geom_histogram(fill = "white", position = "dodge") +
+  geom_vline(data = mu, aes(xintercept = mean_fl, color = Shrub),
+             linetype = "dashed") +
+  theme(legend.position = "top")
 p_histogram
 ```
-What if I want my own colors? Let's check some cool options (aka coolors)
 
+What if I want my own colors? Let's check some cool options (aka coolors).
 ```{r}
-p_histogram<- p_histogram+scale_color_manual(values=c("hotpink", "#56B4E9")) #EXPLAIN
+p_histogram <- p_histogram + 
+  scale_color_manual(values = c("hotpink", "#56B4E9")) #EXPLAIN
 p_histogram
 ```
 
 But I want to make it publication quality! Let's make nice labels on the axes and clean the background
-
 ```{r}
-p_histogram<- p_histogram+xlab("Average Fruit Length")
+p_histogram <- p_histogram + xlab("Average Fruit Length")
 p_histogram
-p_histogram<-p_histogram+theme_classic()
+
+p_histogram <- p_histogram + theme_classic()
 p_histogram
 ```
 
+Ok, what about a histogram for our `airway` differential gene expression data? Let's take a look at the distribution of p-values in the data.
+```{r}
+ggplot(airway_de) +
+  geom_histogram(aes(x = PValue), fill = "gray", color = "black") +
+  theme_classic()
+```
+What should this distribution look like under the null hypothesis that there is no effect of the drug on gene expression?
 
 ### Density plots
 
-What are density plots?- They are areas under the curve and later they will help us to decide about probability!
+What are density plots? They are areas under the curve and later they will help us to decide about probability!
   
-  Let's make a simple one!
+Let's make a simple one!
 ```{r}
-p_density<-ggplot(fruits, aes(x=Fruit_length_avg)) + geom_density()
+p_density <- ggplot(fruits_mod, aes(x = Fruit_length_avg)) + 
+  geom_density()
 p_density
 ```
 
-Make it pretty colors
+Let's give it some pretty colors and add some transparency or reduce the opacity (called `alpha`).
 ```{r}
-p_density<-ggplot(fruits, aes(x=Fruit_length_avg))+
-  geom_density(color="darkblue", fill="lightblue")
+p_density <- ggplot(fruits_mod, aes(x = Fruit_length_avg)) +
+  geom_density(color = "darkblue", fill = "lightblue", alpha = 0.5)
 p_density
 ```
 
-Remember those pesky ``NAs`` what happens in density plots if we remove them. For that we will use the function ``subset()``.
-
-
+We will add the mean.
 ```{r}
-p_density<-ggplot(data=subset(fruits,!is.na(Fruit_length_avg)), aes(x=Fruit_length_avg)) + geom_density()
-p_density
-```
-
-We will add the mean and remember to remove  ``NAs`` (do one with and one without NAs)
-```{r}
-mean.fruit=mean(fruits$Fruit_length_avg,na.rm=TRUE)
+mean.fruit <- mean(fruits_mod$Fruit_length_avg, na.rm = TRUE)
 mean.fruit
 
-p_density<-p_density+ geom_vline(aes(xintercept=mean.fruit),
-              color="blue", linetype="dashed", size=1)
+p_density <- p_density + 
+  geom_vline(aes(xintercept = mean.fruit),
+              color = "blue", linetype = "dashed", linewidth = 1)
 p_density
 ```
-
 
 Change density plot line colors by groups
 ```{r}
-p_density<-ggplot(fruits, aes(x=Fruit_length_avg, color=Shrub)) +
+p_density <- ggplot(fruits_mod, aes(x=Fruit_length_avg, color=Shrub)) +
   geom_density() + geom_vline(data=mu, aes(xintercept=mean_fl, color=Shrub),
              linetype="dashed")
 p_density
 
 # Fill them in 
-p_density<-ggplot(fruits, aes(x=Fruit_length_avg, fill=Shrub)) + geom_density(alpha=0.4)+ geom_vline(data=mu, aes(xintercept=mean_fl, color=Shrub),  linetype="dashed")
+p_density <- ggplot(fruits_mod, aes(x = Fruit_length_avg, fill = Shrub)) + 
+  geom_density(alpha = 0.4) + 
+  geom_vline(data = mu, aes(xintercept = mean_fl, color = Shrub), linetype = "dashed")
 p_density
 ```
 
 Adding my color scheme (tolk about coolors here)
 ```{r}
-p_density<-p_density+scale_fill_manual(values=c("hotpink", "#56B4E9"))
+p_density <- p_density + 
+  scale_fill_manual(values = c("hotpink", "#56B4E9"))
 p_density
 ```
 
 Making it publication style
 ```{r}
-p_density<- p_density+ xlab("Average Fruit Length")+theme_classic()
+p_density <- p_density + 
+  xlab("Average Fruit Length") + 
+  theme_classic()
 p_density
 ```
 
+Let's now do a density plot for the log fold change for the gene expression data and looking at the distribution for FDR < 0.05 and FDR < 0.05. What do we see?
+```{r}
+ggplot(airway_de) +
+  geom_density(aes(x = logFC, fill = FDR < 0.05), alpha = 0.4) +
+  scale_fill_manual(values = c("hotpink", "#56B4E9")) +
+  theme_classic()
+```
 
 ### Histogram with density plot
+
 ```{r}
-p_histdensity<-ggplot(fruits, aes(x=Fruit_length_avg)) + 
-  geom_histogram(aes(y=..density..), colour="black", fill="white")+
-  geom_density(alpha=.2, fill="hotpink") 
+p_histdensity <- ggplot(fruits_mod, aes(x = Fruit_length_avg)) + 
+  geom_histogram(aes(y = after_stat(density)), colour = "black", fill = "white")+
+  geom_density(alpha = .2, fill = "hotpink") 
 p_histdensity
 ```
 
@@ -364,69 +383,107 @@ p_histdensity
 What are box and whisker plots? What are quartiles and interquartile difference??
 
 ```{r}
-ggplot(data=fruits, aes(x=Fruit_length_avg)) + 
+ggplot(data = fruits_mod, aes(x = Fruit_length_avg)) + 
   geom_boxplot()
 ```
 
 How do we make it vertical???
 ```{r}
-p_boxplot<-ggplot(data=fruits, aes(y=Fruit_length_avg)) + 
+p_boxplot <- ggplot(data = fruits_mod, aes(y = Fruit_length_avg)) + 
   geom_boxplot()
 p_boxplot
 ```
 
 How do we make it box and whisker plots by group??
 ```{r}
-p_boxplot<-ggplot(fruits, aes(y=Fruit_length_avg, color=Shrub)) +
+p_boxplot <- ggplot(fruits_mod, aes(y = Fruit_length_avg, color = Shrub)) +
   geom_boxplot()
 p_boxplot
 ```
 
 How do we change the color?
 ```{r}
-p_boxplot<-ggplot(fruits, aes(x=Shrub,y=Fruit_length_avg, color=Shrub)) +
-  geom_boxplot()+scale_color_manual(values=c("hotpink", "#56B4E9"))
+p_boxplot <- ggplot(fruits_mod, aes(x = Shrub, y = Fruit_length_avg, color = Shrub)) +
+  geom_boxplot() + 
+  scale_color_manual(values = c("hotpink", "#56B4E9"))
+p_boxplot
+```
+
+Notice that the x-axis tick labels updated, great! But now the legend is redundant, so let's turn it off.
+```{r}
+p_boxplot <- ggplot(fruits_mod, aes(x = Shrub, y = Fruit_length_avg, color = Shrub)) +
+  geom_boxplot(show.legend = FALSE) + 
+  scale_color_manual(values = c("hotpink", "#56B4E9"))
 p_boxplot
 ```
 
 How do we fill them in
 ```{r}
-p2<-ggplot(fruits, aes(x=Shrub,y=Fruit_length_avg, fill=Shrub)) +
-  geom_boxplot()
+p2 <- ggplot(fruits_mod, aes(x = Shrub, y = Fruit_length_avg, fill = Shrub)) +
+  geom_boxplot(show.legend = FALSE)
 
-p2+scale_fill_manual(values=c("hotpink", "#56B4E9"))
-```
-
-Eliminating those pesky NAs from plots
-```{r}
-p_boxplot<-ggplot(data=subset(fruits, !is.na(Fruit_length_avg)), aes(x=Shrub,y=Fruit_length_avg, color=Shrub)) +
-  geom_boxplot()+scale_color_manual(values=c("hotpink", "#56B4E9"))
-p_boxplot
+p2 + scale_fill_manual(values = c("hotpink", "#56B4E9"))
 ```
 
 How do we add the mean?
 ```{r}
-p_boxplot<-p_boxplot + geom_point(data=mu,aes(x=Shrub,y=mean_fl),shape=23, size=4)
+p_boxplot <- p_boxplot + 
+  geom_point(data = mu, aes(x = Shrub, y = mean_fl), shape = 23, size = 4, show.legend = FALSE)
 p_boxplot
 ```
 
 Adding good labels
 ```{r}
-p_boxplot<-p_boxplot+xlab("Shrub status")+ylab("Average fruit length")
+p_boxplot <- p_boxplot + 
+  xlab("Shrub status") + 
+  ylab("Average fruit length")
 p_boxplot
 ```
 
-How do we add all the sample?
+How do we add all the samples?
 ```{r}
-p_boxplot<-p_boxplot + geom_jitter(shape=16, position=position_jitter(0.2))
+p_boxplot <- p_boxplot + 
+  geom_jitter(shape = 16, position = position_jitter(0.2), show.legend = FALSE)
 p_boxplot
 ```
 
 All pretty and ready for publication
 ```{r}
-p_boxplot<-p_boxplot+theme_classic()
+p_boxplot <- p_boxplot + theme_classic()
 p_boxplot
 ```
+
+Finally, let's create a boxplot for the differential gene expression data that looks at the log fold change as a function of the FDR.
+```{r}
+ggplot(airway_de) +
+  geom_boxplot(aes(y = logFC, x = FDR < 0.05, color = FDR < 0.05), alpha = 0.4, show.legend = FALSE) +
+  scale_color_manual(values = c("hotpink", "#56B4E9")) +
+  theme_classic()
+```
+
+
+# Futher information
+
+There are some recent books on data science and visualization (all written in
+`RMarkdown`, which is a predecessor and alternative to `Quarto`) that cover much
+of the material in the course.
+
+-   Wickham, Hadley, Grolemund, Garrett, and Mine Çetinkaya-Rundel. 2023. R for Data Science (2e). O’Reilly.
+    <   https://r4ds.hadley.nz/>
+-   Wilke, Claus O. 2018. Fundamentals of Data Visualization.
+    <https://clauswilke.com/dataviz/>
+-   Healy, Kieran. 2018. Data Visualization: A Practical Introduction.
+    <http://socviz.co/>
+-   Ismay, Chester and Kim, Albert Y. 2018. An Introduction to Statistical and
+    Data Sciences via R. <https://moderndive.com/>
+-   Silge, Julia and Robinson, David. 2018. Text Mining with R: A Tidy Approach.
+    <https://www.tidytextmining.com/>
+
+If you want to become an R wizard in the style of Hadley Wickham, this book is
+for you.
+
+-   Wickham, Hadley. 2019. Advanced R. <https://adv-r.hadley.nz/>
+
 
 [^1]: Onstein, R. E., W. D. Kissling, L. W. Chatrou, T. L. P. Couvreur, H. Morlon, and H. Sauquet. 2019. Which frugivory-related traits facilitated historical long-distance dispersal in the custard apple family (Annonaceae)? Journal of Biogeography 46:1874–1888.
 [^2]: Wilkinson, L. 2005. The grammar of graphics. Statistics and computing. Springer New York.
