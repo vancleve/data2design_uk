@@ -46,17 +46,19 @@ Using a "project" allows us to keep all our files in one place and helps RStudio
 
 Packages are groups of different functions or "actions" that allows us to do special tasks. People write packages to help others with reproducibility of analyses.
 
-We will be working with the plotting package `ggplot2` and a set of packages for data wrangling called `tidyverse` (<https://www.tidyverse.org/>). By installing just `tidyverse`, we can get all those packages at once.
+We will be working with the plotting package `ggplot2` and a set of packages for data wrangling called `tidyverse` (<https://www.tidyverse.org/>). By installing just `tidyverse`, we can get all those packages at once. We'll also install a package, `cowplot`, for helping with finessing and saving our plots.
 
 ```{r}
 #| eval: false
 install.packages("tidyverse") # packages for data wrangling and plotting including dplyr, readr, tidyr, stringr, readxl, ggplot2, and others
+install.packages("cowplot")
 ```
 Once installed, packages must be loaded into our "environment" (it is like bringing a pen if you are planning to write, not only buying it!). To load them we use the function `library()` 
 
 ```{r}
 library(tidyverse)
 library(readxl)
+library(cowplot)
 ```
 
 # Reading data
@@ -141,17 +143,12 @@ ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg)) +
 
 By adding a color aesthetic, the points are colored based on the value of the variable we map to color. Here, let's map `Shrub` to color and keep the linear regression.
 ```{r}
-plt <- ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg, color = Shrub)) + 
+fruits_plt <- ggplot(fruits, aes(x = Fruit_length_avg, y = Fruit_width_avg, color = Shrub)) + 
   geom_point() + 
   geom_smooth(method = lm, se = FALSE, fullrange = TRUE)
-plt
+fruits_plt
 ```
-
-Are groups different? Let's also save this plot for later for modification in Illustrator.
-```{r}
-#| eval: false
-ggsave("fruit_size_point_plot.pdf", plt, width = 20, height = 12)
-```
+Are the groups different?
 
 ### Volcano plots
 
@@ -190,12 +187,12 @@ airway_de_sig_lbl =
   airway_de_sig |>
   mutate(label = ifelse(PValue < 5e-9, gene_name, ""))
   
-plt = ggplot(airway_de_sig_lbl, aes(x = logFC, y = -log10(PValue))) +
+airway_plt = ggplot(airway_de_sig_lbl, aes(x = logFC, y = -log10(PValue))) +
   geom_point(aes(colour = significance)) +
   geom_text(aes(label = label))
-plt
+airway_plt
 ```
-This looks great except the labels are right on top of the points and they overlap. Maybe we also want to modify the background or add horizontal or vertical lines separating the regions? We can do all these things in Illustrator! Let's save the plot to a PDF so we can load it into illustrator later.
+This looks great except the labels are right on top of the points and they overlap. Maybe we also want to modify the background or add horizontal or vertical lines separating the regions? We can do all these things in Adobe Illustrator! We will save this plot later so we can load it into Illustrator.
 ```{r}
 #| eval: false
 ggsave("airway_de_plot.pdf", plt, width = 20, height = 12)
@@ -445,7 +442,7 @@ p_boxplot <- p_boxplot + theme_classic()
 p_boxplot
 ```
 
-Finally, let's create a boxplot for the differential gene expression data that looks at the log fold change as a function of the FDR.
+Box plots are useful for all kinds of data; let's create a boxplot for the differential gene expression data that looks at the log fold change as a function of the FDR.
 ```{r}
 ggplot(airway_de) +
   geom_boxplot(aes(y = logFC, x = FDR < 0.05, color = FDR < 0.05), alpha = 0.4, show.legend = FALSE) +
@@ -453,6 +450,14 @@ ggplot(airway_de) +
   theme_classic()
 ```
 
+Finally, let's say two of our plots for modification in Adobe Illustrator
+```{r}
+#| eval: false
+plts = plot_grid(fruits_plt, airway_plt) # plot_grid comes from library(cowplot)
+plts
+
+save_plot("Fruit_length_avg_v_airway_de_sig_lbl.pdf", plts, ncol = 2, base_width = 6, base_height = 5) # save_plot comes from library(cowplot)
+```
 
 # Futher information
 
